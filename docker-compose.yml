@@ -1,0 +1,39 @@
+services:
+  user-service:
+    build: ./services/user-service
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: user_svc
+      DB_PASSWORD: ${USER_DB_PASSWORD}
+      DB_NAME: users_db
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "127.0.0.1:8001:8000"
+    restart: on-failure
+
+  book-service:
+    build: ./services/book-service
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: book_svc
+      DB_PASSWORD: ${BOOK_DB_PASSWORD}
+      DB_NAME: books_db
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "127.0.0.1:8002:8000"
+    restart: on-failure
+
+  order-service:
+    build: ./services/order-service
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: order_svc
+      DB_PASSWORD: ${ORDER_DB_PASSWORD}
+      DB_NAME: orders_db
+      JWT_SECRET: ${JWT_SECRET}
+      BOOK_SERVICE_URL: http://book-service:8000
+    ports:
+      - "127.0.0.1:8003:8000"
+    depends_on:
+      - book-service
+    restart: on-failure
