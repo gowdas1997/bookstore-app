@@ -1,0 +1,20 @@
+name: book-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/book-service/**"
+      - ".github/workflows/book-service.yml"
+      - ".github/workflows/_build-service.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_build-service.yml
+    with:
+      service: book-service

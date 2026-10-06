@@ -1,15 +1,14 @@
-name: backend-ci
+name: build-service (reusable)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "services/**"
-      - ".github/workflows/ci.yml"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
 
 permissions:
-  id-token: write   # needed for OIDC
+  id-token: write
   contents: read
 
 env:
@@ -18,10 +17,6 @@ env:
 jobs:
   build-scan-push:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [user-service, book-service, order-service]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,10 +33,10 @@ jobs:
 
       - name: Set image name
         run: |
-          echo "IMAGE=${{ steps.ecr.outputs.registry }}/bookstore/${{ matrix.service }}:${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          echo "IMAGE=${{ steps.ecr.outputs.registry }}/bookstore/${{ inputs.service }}:${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build image
-        run: docker build -t "$IMAGE" services/${{ matrix.service }}
+        run: docker build -t "$IMAGE" services/${{ inputs.service }}
 
       - name: Trivy scan (fail on CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
