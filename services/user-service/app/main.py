@@ -101,3 +101,4 @@ def me(authorization: str = Header(default="")):
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid or expired token")
     return {"id": int(data["sub"]), "email": data["email"]}
+# ci test
