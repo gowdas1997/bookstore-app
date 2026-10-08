@@ -18,3 +18,4 @@ jobs:
     uses: ./.github/workflows/_build-service.yml
     with:
       service: book-service
+    secrets: inherit
