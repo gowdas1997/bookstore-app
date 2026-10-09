@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
 async function api(path, { method = "GET", body, token } = {}) {
   const res = await fetch(path, {
@@ -16,6 +17,7 @@ async function api(path, { method = "GET", body, token } = {}) {
   return data;
 }
 
+// UI convenience only. Real security is the backend 403 for non-admins.
 function roleFromToken(t) {
   try {
     const b64 = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -25,7 +27,98 @@ function roleFromToken(t) {
   }
 }
 
+function BooksPage({ books, token, isAdmin, qty, setQty, order, deleteBook }) {
+  return (
+    <section>
+      <h2>Books</h2>
+      <table>
+        <thead>
+          <tr><th>Title</th><th>Author</th><th>Price</th><th></th></tr>
+        </thead>
+        <tbody>
+          {books.map((b) => (
+            <tr key={b.id}>
+              <td>{b.title}</td>
+              <td>{b.author}</td>
+              <td>Rs {b.price}</td>
+              <td>
+                {token ? (
+                  <>
+                    <input type="number" min="1" max="100" style={{ width: 50 }}
+                           value={qty[b.id] || 1}
+                           onChange={(e) => setQty({ ...qty, [b.id]: e.target.value })} />
+                    <button onClick={() => order(b)}>Order</button>
+                    {isAdmin && <button onClick={() => deleteBook(b.id)}>Delete</button>}
+                  </>
+                ) : (
+                  <Link to="/login">Login to order</Link>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function LoginPage({ email, setEmail, password, setPassword, login, register }) {
+  return (
+    <section>
+      <h2>Login</h2>
+      <form onSubmit={(e) => { e.preventDefault(); login(); }}>
+        <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="password" placeholder="Password (min 8)" value={password}
+               onChange={(e) => setPassword(e.target.value)} />
+        <button type="submit">Login</button>
+        <button type="button" onClick={register}>Register</button>
+      </form>
+    </section>
+  );
+}
+
+function OrdersPage({ orders }) {
+  return (
+    <section>
+      <h2>My orders</h2>
+      {orders.length === 0 ? (
+        <p>No orders yet.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr><th>#</th><th>Book</th><th>Qty</th><th>Total</th><th>Time (UTC)</th></tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.id}>
+                <td>{o.id}</td><td>{o.book_title}</td><td>{o.quantity}</td>
+                <td>Rs {o.total_price}</td><td>{o.created_at}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+function AdminPage({ newBook, setNewBook, addBook }) {
+  return (
+    <section>
+      <h2>Admin: add book</h2>
+      <input placeholder="Title" value={newBook.title}
+             onChange={(e) => setNewBook({ ...newBook, title: e.target.value })} />
+      <input placeholder="Author" value={newBook.author}
+             onChange={(e) => setNewBook({ ...newBook, author: e.target.value })} />
+      <input placeholder="Price" type="number" style={{ width: 80 }} value={newBook.price}
+             onChange={(e) => setNewBook({ ...newBook, price: e.target.value })} />
+      <button onClick={addBook}>Add book</button>
+    </section>
+  );
+}
+
 export default function App() {
+  const navigate = useNavigate();
   const [token, setToken] = useState(sessionStorage.getItem("token") || "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +156,7 @@ export default function App() {
       setToken(data.access_token);
       setPassword("");
       say("Logged in.");
+      navigate("/");
     } catch (e) { say(e.message, true); }
   };
 
@@ -70,6 +164,7 @@ export default function App() {
     sessionStorage.removeItem("token");
     setToken("");
     say("Logged out.");
+    navigate("/login");
   };
 
   const order = async (book) => {
@@ -78,6 +173,7 @@ export default function App() {
       const o = await api("/api/orders", { method: "POST", token, body: { book_id: book.id, quantity } });
       say(`Ordered ${o.quantity} x ${o.book_title}. Total: Rs ${o.total_price}`);
       loadOrders();
+      navigate("/orders");
     } catch (e) { say(e.message, true); }
   };
 
@@ -104,87 +200,30 @@ export default function App() {
   return (
     <div>
       <h1>Mini Bookstore</h1>
+      <nav style={{ display: "flex", gap: 14, alignItems: "center", margin: "8px 0" }}>
+        <Link to="/">Books</Link>
+        {token && <Link to="/orders">My orders</Link>}
+        {isAdmin && <Link to="/admin">Admin</Link>}
+        <span style={{ flex: 1 }} />
+        {token ? <button onClick={logout}>Logout</button> : <Link to="/login">Login</Link>}
+      </nav>
       {msg.text && <div className={`msg ${msg.error ? "err" : ""}`}>{msg.text}</div>}
 
-      <section>
-        {token ? (
-          <button onClick={logout}>Logout</button>
-        ) : (
-          <>
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" placeholder="Password (min 8)" value={password}
-                   onChange={(e) => setPassword(e.target.value)} />
-            <button onClick={login}>Login</button>
-            <button onClick={register}>Register</button>
-          </>
-        )}
-      </section>
-
-      <section>
-        <h2>Books</h2>
-        <table>
-          <thead>
-            <tr><th>Title</th><th>Author</th><th>Price</th><th></th></tr>
-          </thead>
-          <tbody>
-            {books.map((b) => (
-              <tr key={b.id}>
-                <td>{b.title}</td>
-                <td>{b.author}</td>
-                <td>Rs {b.price}</td>
-                <td>
-                  {token ? (
-                    <>
-                      <input type="number" min="1" max="100" style={{ width: 50 }}
-                             value={qty[b.id] || 1}
-                             onChange={(e) => setQty({ ...qty, [b.id]: e.target.value })} />
-                      <button onClick={() => order(b)}>Order</button>
-                      {isAdmin && <button onClick={() => deleteBook(b.id)}>Delete</button>}
-                    </>
-                  ) : (
-                    "Login to order"
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {isAdmin && (
-          <div style={{ marginTop: 12 }}>
-            <input placeholder="Title" value={newBook.title}
-                   onChange={(e) => setNewBook({ ...newBook, title: e.target.value })} />
-            <input placeholder="Author" value={newBook.author}
-                   onChange={(e) => setNewBook({ ...newBook, author: e.target.value })} />
-            <input placeholder="Price" type="number" style={{ width: 80 }} value={newBook.price}
-                   onChange={(e) => setNewBook({ ...newBook, price: e.target.value })} />
-            <button onClick={addBook}>Add book</button>
-          </div>
-        )}
-      </section>
-
-      {token && (
-        <section>
-          <h2>My orders</h2>
-          {orders.length === 0 ? (
-            <p>No orders yet.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr><th>#</th><th>Book</th><th>Qty</th><th>Total</th><th>Time (UTC)</th></tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>{o.id}</td><td>{o.book_title}</td><td>{o.quantity}</td>
-                    <td>Rs {o.total_price}</td><td>{o.created_at}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      )}
+      <Routes>
+        <Route path="/" element={
+          <BooksPage books={books} token={token} isAdmin={isAdmin} qty={qty}
+                     setQty={setQty} order={order} deleteBook={deleteBook} />} />
+        <Route path="/login" element={
+          token ? <Navigate to="/" replace /> :
+          <LoginPage email={email} setEmail={setEmail} password={password}
+                     setPassword={setPassword} login={login} register={register} />} />
+        <Route path="/orders" element={
+          token ? <OrdersPage orders={orders} /> : <Navigate to="/login" replace />} />
+        <Route path="/admin" element={
+          isAdmin ? <AdminPage newBook={newBook} setNewBook={setNewBook} addBook={addBook} />
+                  : <Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }
