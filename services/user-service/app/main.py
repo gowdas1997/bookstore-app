@@ -15,6 +15,7 @@ DB_PASSWORD = os.environ["DB_PASSWORD"]
 DB_NAME = os.getenv("DB_NAME", "users_db")
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
+ADMIN_EMAILS = {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
 
 engine = create_engine(
     f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:3306/{DB_NAME}",
@@ -53,6 +54,7 @@ def make_token(user: User) -> str:
     payload = {
         "sub": str(user.id),
         "email": user.email,
+        "role": "admin" if user.email.lower() in ADMIN_EMAILS else "user",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
@@ -100,5 +102,5 @@ def me(authorization: str = Header(default="")):
         data = jwt.decode(authorization[7:], JWT_SECRET, algorithms=["HS256"])
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid or expired token")
-    return {"id": int(data["sub"]), "email": data["email"]}
+    return {"id": int(data["sub"]), "email": data["email"], "role": data.get("role", "user")}
 # ci test

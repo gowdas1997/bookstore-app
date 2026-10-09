@@ -71,6 +71,12 @@ def require_login(authorization: str = Header(default="")) -> dict:
         raise HTTPException(401, "Invalid or expired token")
 
 
+def require_admin(user: dict = Depends(require_login)) -> dict:
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Admin only")
+    return user
+
+
 # ---- Health checks (Kubernetes probes) ----
 @app.get("/api/books/health")
 def health():
@@ -98,7 +104,7 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/books", status_code=201)
-def add_book(body: BookIn, db: Session = Depends(get_db), user: dict = Depends(require_login)):
+def add_book(body: BookIn, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
     book = Book(title=body.title, author=body.author, price=body.price)
     db.add(book)
     db.commit()
@@ -107,7 +113,7 @@ def add_book(body: BookIn, db: Session = Depends(get_db), user: dict = Depends(r
 
 
 @app.delete("/api/books/{book_id}")
-def delete_book(book_id: int, db: Session = Depends(get_db), user: dict = Depends(require_login)):
+def delete_book(book_id: int, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
     book = db.get(Book, book_id)
     if not book:
         raise HTTPException(404, "Book not found")

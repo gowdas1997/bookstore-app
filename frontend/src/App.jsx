@@ -16,6 +16,15 @@ async function api(path, { method = "GET", body, token } = {}) {
   return data;
 }
 
+function roleFromToken(t) {
+  try {
+    const b64 = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64)).role || "user";
+  } catch {
+    return "user";
+  }
+}
+
 export default function App() {
   const [token, setToken] = useState(sessionStorage.getItem("token") || "");
   const [email, setEmail] = useState("");
@@ -27,6 +36,7 @@ export default function App() {
   const [msg, setMsg] = useState({ text: "", error: false });
 
   const say = (text, error = false) => setMsg({ text, error });
+  const isAdmin = Boolean(token) && roleFromToken(token) === "admin";
 
   const loadBooks = () =>
     api("/api/books").then(setBooks).catch((e) => say(e.message, true));
@@ -129,7 +139,7 @@ export default function App() {
                              value={qty[b.id] || 1}
                              onChange={(e) => setQty({ ...qty, [b.id]: e.target.value })} />
                       <button onClick={() => order(b)}>Order</button>
-                      <button onClick={() => deleteBook(b.id)}>Delete</button>
+                      {isAdmin && <button onClick={() => deleteBook(b.id)}>Delete</button>}
                     </>
                   ) : (
                     "Login to order"
@@ -140,7 +150,7 @@ export default function App() {
           </tbody>
         </table>
 
-        {token && (
+        {isAdmin && (
           <div style={{ marginTop: 12 }}>
             <input placeholder="Title" value={newBook.title}
                    onChange={(e) => setNewBook({ ...newBook, title: e.target.value })} />
