@@ -2,6 +2,7 @@ import os
 
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, Numeric, String, create_engine, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
@@ -42,6 +43,7 @@ with SessionLocal() as s:
         s.commit()
 
 app = FastAPI(title="book-service")
+Instrumentator(excluded_handlers=["/metrics", ".*/health", ".*/ready"]).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 def get_db():

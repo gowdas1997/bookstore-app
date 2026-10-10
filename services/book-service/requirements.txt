@@ -5,3 +5,5 @@ pymysql==1.1.1
 cryptography==43.0.1
 pyjwt==2.14.0
 pydantic==2.9.2
+prometheus-fastapi-instrumentator==7.0.0
+prometheus-client==0.21.0
