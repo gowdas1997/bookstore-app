@@ -82,7 +82,7 @@ jobs:
           git config user.name "bookstore-ci"
           git config user.email "bookstore-ci@users.noreply.github.com"
           for i in 1 2 3; do
-            sed -i "/bookstore\/${SERVICE}\$/{n;s/newTag: .*/newTag: ${TAG}/}" apps/kustomization.yaml
+            sed -i "/bookstore\/${SERVICE}\$/{n;s/newTag: .*/newTag: \"${TAG}\"/}" apps/kustomization.yaml
             if git diff --quiet; then echo "no change needed"; exit 0; fi
             git add apps/kustomization.yaml
             git commit -m "ci: ${SERVICE} -> ${TAG}"
